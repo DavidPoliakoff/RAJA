@@ -53,7 +53,6 @@ of these loops often remain undisturbed. You then select a RAJA parallel executi
 that matches the architecture on which you are running and RAJA handles the rest.
 The problem of tuning stops being one of time-consuming code rewriting, and becomes one
 of changing policies until you find one that works, with code perturbation being minimial.
-.. ## Mention Apollo here?
 
 .. _fromdirectiveland:
 
@@ -67,7 +66,6 @@ yourself tuning a directive in many different places, in RAJA you start by findi
 execute in similar ways and giving them a different "execution policy" which you tune to optimize
 performance. Given a code already implemented in OpenMP4 it might not be worth translating to RAJA,
 but if you're making a move from OpenMP3 RAJA is a good place to start.
-.. ## TODO: strengthen
 
 .. _experienceduser:
 
