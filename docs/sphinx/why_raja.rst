@@ -45,7 +45,7 @@ Xeon Phi (Intel), and many other systems complicating this idea of
 Various solutions came out. OpenMP and OpenACC, traditional parallel tools,
 have been extended to target these new architectures. A system called `Kokkos <https://github.com/kokkos/kokkos>`_
 came out as a way to express parallelism in your code, and allow `Kokkos <https://github.com/kokkos/kokkos>`_ to
-figure out how that parallelism maps to the GPU.
+figure out how that parallelism maps to the architecture you're running on.
 
 What sets RAJA apart is an extreme focus on ease of use while maintaining performance.
 In the RAJA model, you change your for loops into RAJA parallel constructs. The bodies
