@@ -81,6 +81,7 @@ interested in improving RAJA and exploring new ways to use it.
    :maxdepth: 2
 
    introduction
+   why_raja
    config_build
    code_organization
    test_examples
