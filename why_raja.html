@@ -1,0 +1,188 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>Why RAJA? &mdash; RAJA 1.0.0 documentation</title>
+    
+    <link rel="stylesheet" href="_static/classic.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    './',
+        VERSION:     '1.0.0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="top" title="RAJA 1.0.0 documentation" href="index.html" />
+    <link rel="next" title="Configuring and building the code" href="config_build.html" />
+    <link rel="prev" title="Introduction" href="introduction.html" /> 
+  </head>
+  <body role="document">
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="config_build.html" title="Configuring and building the code"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="introduction.html" title="Introduction"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">RAJA 1.0.0 documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="why-raja">
+<h1>Why RAJA?<a class="headerlink" href="#why-raja" title="Permalink to this headline">¶</a></h1>
+<p>RAJA is a system for enabling performance portable parallel codes, aiming
+to performantly run across many architectures while minimizing the burden
+on developers in porting. A key difference between RAJA and other systems
+is its focus on simple exposition of the  latent parallelism in existing codes,
+with an extreme aversion to complicate interfaces and directives in user code.</p>
+<p>Given the breadth of backgrounds of people who are being exposed to parallelism,
+we need to ask, are you:</p>
+<blockquote>
+<div><ul class="simple">
+<li><a class="reference internal" href="#newtoparallel"><span class="std std-ref">New to Parallel Computing?</span></a></li>
+<li><a class="reference internal" href="#fromdirectiveland"><span class="std std-ref">Coming from an OpenMP/OpenACC background?</span></a></li>
+<li><a class="reference internal" href="#experienceduser"><span class="std std-ref">Aware of Kokkos and the other major parallelism frameworks?</span></a></li>
+<li><a class="reference internal" href="#developersdevelopersdevelopers"><span class="std std-ref">Looking to improve RAJA with your own fast abstractions?</span></a></li>
+</ul>
+</div></blockquote>
+</div>
+<div class="section" id="new-to-parallel-computing">
+<span id="newtoparallel"></span><h1>New to Parallel Computing?<a class="headerlink" href="#new-to-parallel-computing" title="Permalink to this headline">¶</a></h1>
+<p>If you&#8217;re new to parallel code, you&#8217;re coming to it at an interesting time.
+Most old architectures were simple variants of a CPU, and code bases could
+be reasonably stable while achieving reasonable performance. In the past
+decade users have seen architectures involving graphics cards (NVIDIA/AMD),
+Xeon Phi (Intel), and many other systems complicating this idea of
+&#8220;performance portability.&#8221;</p>
+<p>Various solutions came out. OpenMP and OpenACC, traditional parallel tools,
+have been extended to target these new architectures. A system called <a class="reference external" href="https://github.com/kokkos/kokkos">Kokkos</a>
+came out as a way to express parallelism in your code, and allow <a class="reference external" href="https://github.com/kokkos/kokkos">Kokkos</a> to
+figure out how that parallelism maps to the architecture you&#8217;re running on.</p>
+<p>What sets RAJA apart is an extreme focus on ease of use while maintaining performance.
+In the RAJA model, you change your for loops into RAJA parallel constructs. The bodies
+of these loops often remain undisturbed. You then select a RAJA parallel execution policy
+that matches the architecture on which you are running and RAJA handles the rest.
+The problem of tuning stops being one of time-consuming code rewriting, and becomes one
+of changing policies until you find one that works, with code perturbation being minimial.</p>
+</div>
+<div class="section" id="coming-from-an-openmp-openacc-background">
+<span id="fromdirectiveland"></span><h1>Coming from an OpenMP/OpenACC background?<a class="headerlink" href="#coming-from-an-openmp-openacc-background" title="Permalink to this headline">¶</a></h1>
+<p>If you&#8217;re an OpenMP or OpenACC developer, RAJA shouldn&#8217;t be a huge shift. You&#8217;re used to
+marking up a parallel region, and tuning by changing the directive in a way that tells the
+compiler to parallelize in a certain way. Where in a directive based approach you might find
+yourself tuning a directive in many different places, in RAJA you start by finding loops which
+execute in similar ways and giving them a different &#8220;execution policy&#8221; which you tune to optimize
+performance. Given a code already implemented in OpenMP4 it might not be worth translating to RAJA,
+but if you&#8217;re making a move from OpenMP3 RAJA is a good place to start.</p>
+</div>
+<div class="section" id="aware-of-kokkos-and-the-other-major-parallelism-frameworks">
+<span id="experienceduser"></span><h1>Aware of Kokkos and the other major parallelism frameworks?<a class="headerlink" href="#aware-of-kokkos-and-the-other-major-parallelism-frameworks" title="Permalink to this headline">¶</a></h1>
+<p>If you currently have code running in <a class="reference external" href="https://github.com/kokkos/kokkos">Kokkos</a>, the performance of RAJA and
+Kokkos are close enough that we don&#8217;t recommend moving to RAJA. If you&#8217;re
+looking at Kokkos and RAJA and trying to pick between them, there are a few
+forces that push you in each direction. First, if you have an existing code,
+RAJA is much more centered on exposing the latent parallelism in your code,
+where Kokkos is a language extension that allows you to express a breadth
+of parallelism. In the case of porting existing code, especially large codes,
+the incremental approach and minimal code perturbation in RAJA are often attractive.</p>
+<p>On the other hand, RAJA only manages how loops execute. While there is work towards
+making an ecosystem around RAJA that manages data, Kokkos manages data layout
+right now. If you&#8217;re building a new code that is extremely sensitive to data
+layout, and you don&#8217;t want to manage laying out the data yourself, Kokkos
+may be advantageous. Further, if your parallel constructs are not loops
+(tasks, for example), Kokkos supports these currently in a way RAJA does not.</p>
+<p>Ultimately, RAJA is about exposing latent parallelism in codes, and Kokkos is
+about providing you with language to express parallelism. As code size increases
+RAJA looks better, as the parallelism model moves farther from parallel loops Kokkos
+looks better.</p>
+</div>
+<div class="section" id="looking-to-improve-raja-with-your-own-fast-abstractions">
+<span id="developersdevelopersdevelopers"></span><h1>Looking to improve RAJA with your own fast abstractions?<a class="headerlink" href="#looking-to-improve-raja-with-your-own-fast-abstractions" title="Permalink to this headline">¶</a></h1>
+<p>Extension section here</p>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">Why RAJA?</a></li>
+<li><a class="reference internal" href="#new-to-parallel-computing">New to Parallel Computing?</a></li>
+<li><a class="reference internal" href="#coming-from-an-openmp-openacc-background">Coming from an OpenMP/OpenACC background?</a></li>
+<li><a class="reference internal" href="#aware-of-kokkos-and-the-other-major-parallelism-frameworks">Aware of Kokkos and the other major parallelism frameworks?</a></li>
+<li><a class="reference internal" href="#looking-to-improve-raja-with-your-own-fast-abstractions">Looking to improve RAJA with your own fast abstractions?</a></li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="introduction.html"
+                        title="previous chapter">Introduction</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="config_build.html"
+                        title="next chapter">Configuring and building the code</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/why_raja.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="config_build.html" title="Configuring and building the code"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="introduction.html" title="Introduction"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">RAJA 1.0.0 documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &copy; Copyright 2016, Rich Hornung and Jeff Keasler.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.4.1.
+    </div>
+  </body>
+</html>
