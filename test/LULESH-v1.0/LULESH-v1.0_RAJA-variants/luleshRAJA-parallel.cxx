@@ -381,9 +381,8 @@ void TimeIncrement(Domain *domain)
       }
       domain->deltatime = newdt ;
    }
-
-   /* TRY TO PREVENT VERY SMALL SCALING ON THE NEXT CYCLE */
-   if ((targetdt > domain->deltatime) &&
+    /**
+   if ((targetdt > domain-deltatime) &&
        (targetdt < (Real_t(4.0) * domain->deltatime / Real_t(3.0))) ) {
       targetdt = Real_t(2.0) * domain->deltatime / Real_t(3.0) ;
    }
@@ -393,7 +392,7 @@ void TimeIncrement(Domain *domain)
    }
 
    domain->time += domain->deltatime ;
-
+   */
    ++domain->cycle ;
 }
 

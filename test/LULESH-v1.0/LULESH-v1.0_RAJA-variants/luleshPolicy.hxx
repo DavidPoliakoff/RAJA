@@ -52,13 +52,13 @@ enum TilingMode
 
 TilingMode const lulesh_tiling_mode = Canonical;
 
-typedef RAJA::seq_segit              Hybrid_Seg_Iter;
-typedef RAJA::simd_exec              Segment_Exec;
+typedef RAJA::ContextualPolicy<RAJA::seq_segit>              Hybrid_Seg_Iter;
+typedef RAJA::ContextualPolicy<RAJA::simd_exec>              Segment_Exec;
 
-typedef RAJA::IndexSet::ExecPolicy<Hybrid_Seg_Iter, Segment_Exec> node_exec_policy;
-typedef RAJA::IndexSet::ExecPolicy<Hybrid_Seg_Iter, Segment_Exec> elem_exec_policy;
-typedef RAJA::IndexSet::ExecPolicy<Hybrid_Seg_Iter, Segment_Exec> mat_exec_policy;
-typedef RAJA::IndexSet::ExecPolicy<Hybrid_Seg_Iter, Segment_Exec> symnode_exec_policy;
+typedef RAJA::ContextualPolicy<RAJA::IndexSet::ExecPolicy<Hybrid_Seg_Iter, Segment_Exec>> node_exec_policy;
+typedef RAJA::ContextualPolicy<RAJA::IndexSet::ExecPolicy<Hybrid_Seg_Iter, Segment_Exec>> elem_exec_policy;
+typedef RAJA::ContextualPolicy<RAJA::IndexSet::ExecPolicy<Hybrid_Seg_Iter, Segment_Exec>> mat_exec_policy;
+typedef RAJA::ContextualPolicy<RAJA::IndexSet::ExecPolicy<Hybrid_Seg_Iter, Segment_Exec>> symnode_exec_policy;
 
 typedef RAJA::seq_reduce reduce_policy; 
 

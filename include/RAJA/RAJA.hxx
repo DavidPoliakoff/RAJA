@@ -119,6 +119,7 @@
 // All platforms must support sequential execution.  
 //
 #include "RAJA/exec-sequential/raja_sequential.hxx"
+#include "RAJA/exec-context/raja_context.hxx"
 
 //
 // All platforms should support simd execution.  
