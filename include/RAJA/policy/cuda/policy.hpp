@@ -1,5 +1,60 @@
+/*!
+ ******************************************************************************
+ *
+ * \file
+ *
+ * \brief   Header file containing RAJA CUDA policy definitions.
+ *
+ ******************************************************************************
+ */
+
 #ifndef RAJA_policy_cuda_HPP
 #define RAJA_policy_cuda_HPP
+
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
+// Copyright (c) 2016, Lawrence Livermore National Security, LLC.
+//
+// Produced at the Lawrence Livermore National Laboratory
+//
+// LLNL-CODE-689114
+//
+// All rights reserved.
+//
+// This file is part of RAJA.
+//
+// For additional details, please also read RAJA/LICENSE.
+//
+// Redistribution and use in source and binary forms, with or without
+// modification, are permitted provided that the following conditions are met:
+//
+// * Redistributions of source code must retain the above copyright notice,
+//   this list of conditions and the disclaimer below.
+//
+// * Redistributions in binary form must reproduce the above copyright notice,
+//   this list of conditions and the disclaimer (as noted below) in the
+//   documentation and/or other materials provided with the distribution.
+//
+// * Neither the name of the LLNS/LLNL nor the names of its contributors may
+//   be used to endorse or promote products derived from this software without
+//   specific prior written permission.
+//
+// THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+// AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+// IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+// ARE DISCLAIMED. IN NO EVENT SHALL LAWRENCE LIVERMORE NATIONAL SECURITY,
+// LLC, THE U.S. DEPARTMENT OF ENERGY OR CONTRIBUTORS BE LIABLE FOR ANY
+// DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+// DAMAGES  (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+// OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+// HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+// STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+// IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+// POSSIBILITY OF SUCH DAMAGE.
+//
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~//
+
+#include "RAJA/config.hpp"
+#include "RAJA/policy/PolicyBase.hpp"
 
 namespace RAJA
 {
@@ -66,16 +121,25 @@ struct Dim3z {
 /// Segment execution policies
 ///
 
-struct cuda_exec_base {
+namespace detail
+{
+template <bool Async>
+struct get_launch {
+  static constexpr RAJA::Launch value = RAJA::Launch::async;
 };
+
+template <>
+struct get_launch<false> {
+  static constexpr RAJA::Launch value = RAJA::Launch::sync;
+};
+}
 
 template <size_t BLOCK_SIZE, bool Async = false>
-struct cuda_exec : public cuda_exec_base {
+struct cuda_exec
+    : public RAJA::make_policy_launch_pattern<RAJA::Policy::cuda,
+                                              detail::get_launch<Async>::value,
+                                              RAJA::Pattern::forall> {
 };
-
-///
-template <size_t BLOCK_SIZE>
-using cuda_exec_async = cuda_exec<BLOCK_SIZE, true>;
 
 //
 // NOTE: There is no Index set segment iteration policy for CUDA
@@ -88,20 +152,26 @@ using cuda_exec_async = cuda_exec<BLOCK_SIZE, true>;
 ///
 ///////////////////////////////////////////////////////////////////////
 ///
+
 template <size_t BLOCK_SIZE, bool Async = false>
-struct cuda_reduce {
+struct cuda_reduce
+    : public RAJA::make_policy_launch_pattern<RAJA::Policy::cuda,
+                                              detail::get_launch<Async>::value,
+                                              RAJA::Pattern::reduce> {
 };
-///
-template <size_t BLOCK_SIZE, bool Async = false>
-struct cuda_reduce_atomic {
-};
-///
+
 template <size_t BLOCK_SIZE>
 using cuda_reduce_async = cuda_reduce<BLOCK_SIZE, true>;
-///
+
+template <size_t BLOCK_SIZE, bool Async = false>
+struct cuda_reduce_atomic
+    : public RAJA::make_policy_launch_pattern<RAJA::Policy::cuda,
+                                              detail::get_launch<Async>::value,
+                                              RAJA::Pattern::reduce> {
+};
+
 template <size_t BLOCK_SIZE>
 using cuda_reduce_atomic_async = cuda_reduce_atomic<BLOCK_SIZE, true>;
-
 
 //
 // Operations in the included files are parametrized using the following
@@ -125,16 +195,8 @@ const int RAJA_CUDA_MAX_BLOCK_SIZE = 2048;
 #define RAJA_USE_ATOMIC_TWO
 //#define RAJA_USE_NO_ATOMICS
 
-#if 0
-#define ull_to_double(x) __longlong_as_double(reinterpret_cast<long long>(x))
-
-#define double_to_ull(x) \
-  reinterpret_cast<unsigned long long>(__double_as_longlong(x))
-#else
 #define ull_to_double(x) __longlong_as_double(x)
-
 #define double_to_ull(x) __double_as_longlong(x)
-#endif
 
 /*!
  ******************************************************************************
@@ -149,19 +211,19 @@ const int RAJA_CUDA_MAX_BLOCK_SIZE = 2048;
 template <typename T>
 __device__ inline T _atomicMin(T *address, T value)
 {
-return atomicMin(address, value);
+  return atomicMin(address, value);
 }
 ///
 template <typename T>
 __device__ inline T _atomicMax(T *address, T value)
 {
-return atomicMax(address, value);
+  return atomicMax(address, value);
 }
 ///
 template <typename T>
 __device__ inline T _atomicAdd(T *address, T value)
 {
-return atomicAdd(address, value);
+  return atomicAdd(address, value);
 }
 
 //
@@ -491,11 +553,7 @@ __device__ inline double _atomicAdd(double *address, double value)
 }
 #endif
 
-#elif defined(RAJA_USE_NO_ATOMICS)
-
-// Noting to do here...
-
-#else
+#elif !defined(RAJA_USE_NO_ATOMICS)
 
 #error one of the options for using/not using atomics must be specified
 
