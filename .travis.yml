@@ -53,6 +53,18 @@ matrix:
     - COMPILER=$HOME/llvm/clang+llvm-3.7.0-x86_64-linux-gnu-ubuntu-14.04/bin/clang++
     - DOWNLOAD=http://releases.llvm.org/3.7.0/clang+llvm-3.7.0-x86_64-linux-gnu-ubuntu-14.04.tar.xz
     - WARN=""
+  - compiler: nvcc
+    addons:
+      apt:
+        sources:
+        - ubuntu-toolchain-r-test
+        packages:
+        - g++-4.9
+        - nvidia-cuda-toolkit
+    env:
+    - COMPILER=g++-4.9 
+    - WARN="-DRAJA_ENABLE_WARNINGS=On"
+    - CMAKE_EXTRA_FLAGS="-DRAJA_ENABLE_CUDA=ON"
   - compiler: clang-3.8
     addons:
       apt:
