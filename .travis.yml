@@ -1,9 +1,19 @@
 sudo: required
 dist: trusty
 language: cpp
+services:
+  - docker
 
 matrix:
   include:
+   - compiler: nvcc
+     services:
+       - docker
+     before_install:
+       - sudo apt-get update -qq
+       - if [[ -n "$DOWNLOAD" ]] ; then if [[ ! -e "$COMPILER" ]] ; then cd $HOME; curl -o tarball.tar.xz $DOWNLOAD && cd $HOME/llvm && tar xf $HOME/tarball.tar.xz ; fi ; fi
+       - CMAKE_URL="https://cmake.org/files/v3.7/cmake-3.7.0-rc2-Linux-x86_64.tar.gz"
+       - cd $HOME && curl -o cmake-tarball.tar.gz ${CMAKE_URL} && mkdir -p $HOME/cmake && cd $HOME/cmake && tar xf $HOME/cmake-tarball.tar.gz --strip-components=1 && export PATH=${PWD}/bin:${PATH}
    - compiler: gcc-4
      addons:
        apt:
