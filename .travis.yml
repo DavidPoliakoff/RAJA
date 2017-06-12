@@ -61,7 +61,10 @@ matrix:
         packages:
         - g++-4.9
     env:
-    - COMPILER=g++-4.9 - CMAKE_EXTRA_FLAGS="-DRAJA_ENABLE_CUDA=ON" - NVIDIA_INSTALLER = "http://developer.download.nvidia.com/compute/cuda/repos/ubuntu1404/x86_64/cuda-repo-ubuntu1404_8.0.61-1_amd64.deb" - SKIP_RUNTIME_TESTS = "YES"
+    - COMPILER=g++-4.9 
+    - CMAKE_EXTRA_FLAGS="-DRAJA_ENABLE_CUDA=ON" 
+    - NVIDIA_INSTALLER="http://developer.download.nvidia.com/compute/cuda/repos/ubuntu1404/x86_64/cuda-repo-ubuntu1404_8.0.61-1_amd64.deb" 
+    - SKIP_RUNTIME_TESTS="YES"
   - compiler: clang-3.8
     addons:
       apt:
