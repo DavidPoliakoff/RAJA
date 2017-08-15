@@ -189,7 +189,7 @@ const int COHERENCE_BLOCK_SIZE = @RAJA_COHERENCE_BLOCK_SIZE@;
 
 #endif
 
-#define RAJA_SIMD  // TODO: Define this...
+#define RAJA_SIMD _Pragma("simd noassert")
 
 
 #elif defined(RAJA_COMPILER_GNU) 
@@ -207,7 +207,7 @@ const int COHERENCE_BLOCK_SIZE = @RAJA_COHERENCE_BLOCK_SIZE@;
 
 #endif
 
-#define RAJA_SIMD  // TODO: Define this...
+#define RAJA_SIMD _Pragma("simd noassert")
 
 
 #elif defined(RAJA_COMPILER_XLC)
@@ -219,8 +219,7 @@ const int COHERENCE_BLOCK_SIZE = @RAJA_COHERENCE_BLOCK_SIZE@;
 
 #define RAJA_ALIGN_DATA(d) __alignx(DATA_ALIGN, d)
 
-//#define RAJA_SIMD  _Pragma("simd_level(10)")
-#define RAJA_SIMD   // TODO: Define this... 
+#define RAJA_SIMD _Pragma("simd noassert")
 
 
 #elif defined(RAJA_COMPILER_CLANG)
@@ -238,7 +237,7 @@ const int COHERENCE_BLOCK_SIZE = @RAJA_COHERENCE_BLOCK_SIZE@;
 
 #endif
 
-#define RAJA_SIMD  // TODO: Define this...
+#define RAJA_SIMD _Pragma("simd noassert")
 
 #else
 
@@ -246,7 +245,7 @@ const int COHERENCE_BLOCK_SIZE = @RAJA_COHERENCE_BLOCK_SIZE@;
 
 #define RAJA_INLINE inline
 #define RAJA_ALIGN_DATA(d)
-#define RAJA_SIMD
+#define RAJA_SIMD _Pragma("simd noassert")
 
 #endif
 
