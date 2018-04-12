@@ -191,6 +191,23 @@ void clearChaiExecutionSpace()
   rm->setExecutionSpace(chai::NONE);
 #endif
 }
+
+/** Class which informs CHAI that the ManagedArrays currently being copied are
+ *  not inner temporaries, but ones from capture in a RAJA scope
+ */
+struct chaiTemporaryState{
+  chaiTemporaryState(){
+#if defined(RAJA_ENABLE_CHAI)
+    chai::ArrayManager* rm = chai::ArrayManager::getInstance();
+    rm->setObserveCopies(true);
+#endif
+  }
+  ~chaiTemporaryState(){
+    chai::ArrayManager* rm = chai::ArrayManager::getInstance();
+    rm->setObserveCopies(false);
+  }
+};
+
 }
 }
 
