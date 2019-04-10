@@ -1,6 +1,44 @@
 #include<RAJA/RAJA.hpp>
+#include <chrono>
 #include <tuple>
+using clock_type = std::chrono::high_resolution_clock;
+#ifdef USE_CALIPER
+#include <caliper/Annotation.h>
+#include <caliper/cali.h>
+cali::Annotation func_annot("function",CALI_ATTR_NESTED);
+#endif
 
+#ifdef USE_JIT
+#define JIT_ENABLED true
+#else
+#define JIT_ENABLED false
+#endif
+
+void enable_caliper(const char* fn){
+#ifdef USE_CALIPER
+  cali_config_preset("CALI_SERVICES_ENABLE","event:recorder:aggregate:timestamp");
+  cali_config_preset("CALI_RECORDER_FILENAME",fn);
+#endif
+}
+
+void begin(const char* name){
+#ifdef USE_CALIPER
+  func_annot.begin(name);
+#endif
+}
+
+void end(){
+#ifdef USE_CALIPER
+  func_annot.end();
+#endif
+}
+
+template<typename T>
+void set_global(const char* key, T value){
+#ifdef USE_CALIPER
+  cali::Annotation(key,CALI_ATTR_GLOBAL | CALI_ATTR_SKIP_EVENTS).set(value);
+#endif
+}
 #define MAT2D(r,c,size) r*size+c
 
 using namespace RAJA::statement;
@@ -57,7 +95,7 @@ void affine_jit_kernel_difficult(TupleLike IndexTuple, Kernel&& kernel){
 }
 
 template<std::size_t... ends, typename Kernel>
-[[clang::jit]] void affine_jit_kernel(Kernel&& kernel){
+[[clang::jit]] void affine_jit_kernel(Kernel&& kernel) {
   static auto rs =
     camp::make_tuple(
         RAJA::RangeSegment(0,ends)...
@@ -69,7 +107,7 @@ template<std::size_t... ends, typename Kernel>
 }
 
 template<std::size_t n_matrices, std::size_t size>
-[[clang::jit]] void affine_jit_kernel_simplified(float* out_matrix, float* input_matrix1, float* input_matrix2){
+[[clang::jit]] void affine_jit_kernel_simplified(float* out_matrix, float* input_matrix1, float* input_matrix2) {
   static auto rs = 
       camp::make_tuple(
         RAJA::RangeSegment(0,n_matrices),
@@ -103,15 +141,26 @@ void affine_kernel(Kernel&& k, Args... ends){
 #endif // USE_JIT
 
 int main(int argc, char* argv[]){
+  srand(time(nullptr));
+  auto start_click = clock_type::now();
+  int run_id = rand();
   (void)argc;
   std::size_t size = atoi(argv[1]);
   std::size_t batch_size = atoi(argv[2]);
-  srand(time(nullptr));
   std::cout << "Size is "<<size<<", batch size "<< batch_size<<"\n";
   std::size_t repeats = 5000000000;
   if(argc>2){
      repeats = atoi(argv[3]) * 10000000;
   }
+  char file_name[1024];
+  sprintf(file_name, "%lu_%lu_%lu%s.cali",size,batch_size,repeats, JIT_ENABLED ? "_jit" : "");
+  enable_caliper(file_name);
+  begin("main");
+  set_global("total_iterations", (double)repeats);
+  set_global("size",(int)size);
+  set_global("batch_size",(int)batch_size);
+  set_global("run_id",run_id);
+  set_global("has_jit",JIT_ENABLED);
   float* out_matrix = (float*)malloc(sizeof(float)*size*size );
   float* input_matrix1 = (float*)malloc(sizeof(float)*size*size);
   float* input_matrix2 = (float*)malloc(sizeof(float)*size*size);
@@ -134,8 +183,9 @@ int main(int argc, char* argv[]){
         }
     );
 #endif 
-    
-#ifdef NO_JIT
+  }
+  auto mid_click = clock_type::now();
+  for(std::size_t rep = 0; rep<(repeats/batch_size);rep++){
     affine_kernel<RAJA::KernelPolicy<
       For<
         0,seq_exec,
@@ -156,6 +206,14 @@ int main(int argc, char* argv[]){
         size,
         size
       );
-#endif
   } // end for loop
+  auto end_click = clock_type::now();
+  auto total_time = (double)std::chrono::duration_cast<std::chrono::nanoseconds>(end_click - start_click).count();
+  auto nonjit_time = (double)std::chrono::duration_cast<std::chrono::nanoseconds>(end_click - mid_click).count();
+  auto jit_time = (double)std::chrono::duration_cast<std::chrono::nanoseconds>(mid_click - start_click).count();
+  set_global("total_time",total_time);
+  set_global("jit_time",jit_time); 
+  set_global("traditional_time",nonjit_time);
+  set_global("speedup",nonjit_time/jit_time);
+  end();
 }
