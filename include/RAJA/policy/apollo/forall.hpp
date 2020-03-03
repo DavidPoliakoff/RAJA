@@ -56,8 +56,6 @@
 #include "apollo/Apollo.h"
 #include "apollo/Region.h"
 
-#include "CallpathRuntime.h"
-
 
 //namespace RAJA
 //{
@@ -330,14 +328,6 @@ const int POLICY_COUNT = 20;
     //
 
 
-inline void replace_all(std::string& input, const std::string& from, const std::string& to) {
-	size_t pos = 0;
-	while ((pos = input.find(from, pos)) != std::string::npos) {
-		input.replace(pos, from.size(), to);
-		pos += to.size();
-	}
-}
-
 
 
 template <typename Iterable, typename Func>
@@ -348,17 +338,9 @@ RAJA_INLINE void forall_impl(const apollo_exec &, Iterable &&iter, Func &&body)
     static int             policy_index       = 0;
     static int             th_count_opts[6]   = {2, 2, 2, 2, 2, 2};
     if (apolloRegion == nullptr) {
-        // Set up this Apollo::Region for the first time:       (Runs only once)
-        std::stringstream ss_location;
-        ss_location << apollo->callpath.doStackwalk().get(1);
-        // Extract out the pointer to our module+offset string and clean it up:
-        std::string offsetptr = ss_location.str();
-        offsetptr = offsetptr.substr((offsetptr.rfind("/") + 1), (offsetptr.length() - 1));
-        replace_all(offsetptr, "(", "_");
-        replace_all(offsetptr, ")", "_");
-
+        std::string code_location = apollo->getCallpathOffset();
         apolloRegion = new Apollo::Region(
-            offsetptr.c_str(),
+            code_location.c_str(),
             RAJA::policy::apollo::POLICY_COUNT);
         // Set the range of thread counts we want to make available for
         // bootstrapping and use by this Apollo::Region.

@@ -1,0 +1,17 @@
+#!/bin/bash
+rm -rf ./build
+rm -rf ./install
+mkdir build
+mkdir install
+cd build
+#
+cmake   \
+        -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
+        -DCMAKE_INSTALL_PREFIX=$HOME/src/raja/install \
+        -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+        -DENABLE_APOLLO=ON \
+        -DAPOLLO_DIR=$HOME/src/apollo/install \
+        -Wno-dev \
+        ..
+#
+make -j 8 && make install && cd .. && tree install
