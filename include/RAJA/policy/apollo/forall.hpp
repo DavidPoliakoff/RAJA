@@ -64,6 +64,9 @@
 //namespace omp
 //{
 
+// NOTE(chad): We probably want to use a global here for performance, like these
+//             examples... revisit this soon.
+
 //template <typename Iterable, typename Func>
 //RAJA_INLINE void forall_impl(const RAJA::apollo_omp_auto&, Iterable&& iter, Func&& loop_body) {
 //  RAJA_EXTRACT_BED_IT(iter);
