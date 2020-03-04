@@ -39,6 +39,8 @@
 #include <sstream>
 #include <functional>
 #include <unordered_set>
+#include <vector>
+#include <tuple>
 
 #include <omp.h>
 
@@ -110,15 +112,30 @@ RAJA_INLINE void openmp_trace_executor(BODY body) {
     body(openmpTracePolicy{});
 }
 
+
 template <typename Iterable, typename Func>
 RAJA_INLINE void forall_impl(const openmp_trace_exec &, Iterable &&iter, Func &&body)
 {
+
+    typedef std::vector<
+      std::tuple<
+        double,
+        std::string,
+        int,
+        std::string,
+        int,
+        int,
+        int,
+        double> > TraceVector_t;
+
+    static TraceVector_t  *v                 = nullptr;
     static bool            initialized_yet   = false;
     static std::string     node_id           = "";
     static int             comm_rank         = -1;
     static int             num_threads       = 0;
     static int             policy_index      = -1;   // <-- need not be used, for apollo tests.
     static std::string     region_name       = "";
+
 
     if (not initialized_yet) {
         // Set up this OpenMP wrapper for the first time:       (Runs only once)
@@ -139,6 +156,8 @@ RAJA_INLINE void forall_impl(const openmp_trace_exec &, Iterable &&iter, Func &&
         num_threads    = std::atoi(safe_getenv("OMP_NUM_THREADS", "-1"));
         policy_index   = std::atoi(safe_getenv("TRACE_AS_POLICY_INDEX", "-1"));
 
+        v = new TraceVector_t();
+
 	    initialized_yet = true;
     }
 
@@ -155,18 +174,35 @@ RAJA_INLINE void forall_impl(const openmp_trace_exec &, Iterable &&iter, Func &&
 
     NOTE_TIME(exec_time_end);
 
-    std::cout.precision(17);
-    std::cout \
-        << "TRACE," \
-        << exec_time_end << "," \
-        << node_id << ","
-        << comm_rank << ","
-        << region_name << "," \
-        << policy_index << "," \
-        << num_threads << "," \
-        << num_elements << "," \
-        << std::fixed << (exec_time_end - exec_time_begin) \
-        << std::endl;
+    v->push_back(
+            std::make_tuple(
+                exec_time_end,
+                node_id,
+                comm_rank,
+                region_name,
+                policy_index,
+                num_threads,
+                num_elements,
+                (exec_time_end - exec_time_begin)
+                )
+            );
+
+    ////std::cout.precision(17);
+    ////
+    ////  ...and removed(chad):
+    ////  << std::fixed << (exec_...
+    ////
+    //std::cout \
+    //    << "TRACE," \
+    //    << exec_time_end << "," \
+    //    << node_id << "," \
+    //    << comm_rank << "," \
+    //    << region_name << "," \
+    //    << policy_index << "," \
+    //    << num_threads << "," \
+    //    << num_elements << "," \
+    //    << (exec_time_end - exec_time_begin) \
+    //    << std::endl;
 
 }
 
