@@ -8,6 +8,34 @@
  *
  *          These methods should work on any platform.
  *
+ *          This code can utilize values set in the following environment
+ *          variables:
+ *
+ *            - OPENMP_TRACE_OUTPUT_FILE
+ *              Where to flush the trace CSV at the program exit.
+ *              Defaults to std::cout if nothing is set or path causes
+ *              an exception to be thrown.
+ *
+ *            - OPENMP_TRACE_AS_POLICY
+ *              If this trace is used to capture raw OpenMP runtimes for
+ *              contrast with RAJA(apollo_exec) policy times, this value
+ *              can be used to populate the (int) 'policy_index' column of
+ *              the output CSV to identify which RAJA(apollo_exec) policy
+ *              it is most closely mimicking.  If it is not set, a value
+ *              of -1 will be used.
+ *              NOTE: For performance reasons, this value is only read once,
+ *                    the first time a RAJA loop is encountered. A loop will
+ *                    not pick up any changes made to that environment variable
+ *                    after that loop has been evaluated.
+ *
+ *          The following environment variables are safely read and used
+ *          for logging into the trace CSV, but will not change any settings or
+ *          impact characteristics of execution:
+ *
+ *            - HOSTNAME
+ *            - OMP_NUM_THREADS
+ *            - PMI_RANK / OMPI_COMM_WORLD_RANK
+ *
  ******************************************************************************
  */
 
@@ -37,6 +65,7 @@
 
 #include <string>
 #include <sstream>
+#include <fstream>
 #include <functional>
 #include <unordered_set>
 #include <vector>
@@ -74,6 +103,21 @@ namespace policy
 namespace openmp_trace
 {
 
+typedef std::vector<
+    std::tuple<
+        double,
+        std::string,
+        int,
+        std::string,
+        int,
+        int,
+        int,
+        double
+    >
+> TraceVector_t;
+
+
+
 inline void replace_all(std::string& input, const std::string& from, const std::string& to) {
 	size_t pos = 0;
 	while ((pos = input.find(from, pos)) != std::string::npos) {
@@ -96,14 +140,75 @@ inline const char* safe_getenv(const char *var_name, const char *use_this_if_not
     }
 }
 
-//template <typename Iterable, typename Func>
-//RAJA_INLINE void forall_impl(const RAJA::openmp_trace_parallel_for&, Iterable&& iter, Func&& loop_body) {
-//  RAJA_EXTRACT_BED_IT(iter);
-//  for (decltype(distance_it) i = 0; i < distance_it; ++i) {
-//    loop_body(begin_it[i]);
-//  }
-//}
-//
+class OpenMPTraceControl
+{
+    public:
+        ~OpenMPTraceControl() {
+            this->end();
+        }
+        OpenMPTraceControl(const OpenMPTraceControl&) = delete;
+        OpenMPTraceControl& operator=(const OpenMPTraceControl&) = delete;
+
+        static OpenMPTraceControl* instance(void) noexcept {
+            static OpenMPTraceControl the_instance;
+            return &the_instance;
+        }
+
+        TraceVector_t *getTraceVectorPtr(void) {
+            return &trace_data;
+        }
+
+        void end() {
+            double flush_time_start = 0.0;
+            double flush_time_end   = 0.0;
+            NOTE_TIME(flush_time_start);
+
+            std::string flush_filename = safe_getenv("OPENMP_TRACE_OUTPUT_FILE", "stdout");
+            if (flush_filename.compare("stdout") == 0) {
+                writeTraceVector(std::cout);
+            } else {
+                try {
+                    std::ofstream sink_file(flush_filename, std::fstream::out);
+                    writeTraceVector(sink_file);
+                } catch (...) {
+                    std::cerr << "== RAJA(openmp_trace): ** ERROR ** Could not open the filename specified in" \
+                              << " the OPENMP_TRACE_OUTPUT_FILE environment variable:" << std::endl;
+                    std::cerr << "== RAJA(openmp_trace): ** ERROR **     \"" << flush_filename << "\"" << std::endl;
+                    std::cerr << "== RAJA(openmp_trace): ** ERROR ** Defaulting to std::cout ..." << std::endl;
+                    writeTraceVector(std::cout);
+                }
+            }
+
+            NOTE_TIME(flush_time_end);
+            std::cout << "== OPENMP_TRACE: " << std::fixed << (flush_time_end - flush_time_start) \
+                      << " seconds to flush trace to std::cout." << std::endl;
+            return;
+        }
+
+
+    private:
+        OpenMPTraceControl() {};
+        TraceVector_t trace_data;
+
+        void writeTraceVector(std::ostream &sink) {
+            std::cout.precision(17);
+            for (auto &t : trace_data) {
+                sink \
+                    << "TRACE," \
+                    << std::get<0>(t) /* exec_time_end */ << "," \
+                    << std::get<1>(t) /* node_id */       << "," \
+                    << std::get<2>(t) /* comm_rank */     << "," \
+                    << std::get<3>(t) /* region_name */   << "," \
+                    << std::get<4>(t) /* policy_index */  << "," \
+                    << std::get<5>(t) /* num_threads */   << "," \
+                    << std::get<6>(t) /* num_elements */  << "," \
+                    << std::fixed << std::get<7>(t) /* (exec_time_end - exec_time_begin) */ \
+                    << std::endl;
+            }
+            sink.flush();
+        }
+
+};
 
 using openmpTracePolicy = RAJA::omp_parallel_for_exec;
 
@@ -112,30 +217,16 @@ RAJA_INLINE void openmp_trace_executor(BODY body) {
     body(openmpTracePolicy{});
 }
 
-
 template <typename Iterable, typename Func>
 RAJA_INLINE void forall_impl(const openmp_trace_exec &, Iterable &&iter, Func &&body)
 {
-
-    typedef std::vector<
-      std::tuple<
-        double,
-        std::string,
-        int,
-        std::string,
-        int,
-        int,
-        int,
-        double> > TraceVector_t;
-
-    static TraceVector_t  *v                 = nullptr;
     static bool            initialized_yet   = false;
     static std::string     node_id           = "";
     static int             comm_rank         = -1;
     static int             num_threads       = 0;
     static int             policy_index      = -1;   // <-- need not be used, for apollo tests.
     static std::string     region_name       = "";
-
+    static TraceVector_t  *v                 = nullptr;
 
     if (not initialized_yet) {
         // Set up this OpenMP wrapper for the first time:       (Runs only once)
@@ -156,7 +247,7 @@ RAJA_INLINE void forall_impl(const openmp_trace_exec &, Iterable &&iter, Func &&
         num_threads    = std::atoi(safe_getenv("OMP_NUM_THREADS", "-1"));
         policy_index   = std::atoi(safe_getenv("TRACE_AS_POLICY_INDEX", "-1"));
 
-        v = new TraceVector_t();
+        v = OpenMPTraceControl::instance()->getTraceVectorPtr();
 
 	    initialized_yet = true;
     }
@@ -186,23 +277,6 @@ RAJA_INLINE void forall_impl(const openmp_trace_exec &, Iterable &&iter, Func &&
                 (exec_time_end - exec_time_begin)
                 )
             );
-
-    ////std::cout.precision(17);
-    ////
-    ////  ...and removed(chad):
-    ////  << std::fixed << (exec_...
-    ////
-    //std::cout \
-    //    << "TRACE," \
-    //    << exec_time_end << "," \
-    //    << node_id << "," \
-    //    << comm_rank << "," \
-    //    << region_name << "," \
-    //    << policy_index << "," \
-    //    << num_threads << "," \
-    //    << num_elements << "," \
-    //    << (exec_time_end - exec_time_begin) \
-    //    << std::endl;
 
 }
 
