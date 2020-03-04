@@ -181,7 +181,7 @@ class OpenMPTraceControl
 
             NOTE_TIME(flush_time_end);
             std::cout << "== OPENMP_TRACE: " << std::fixed << (flush_time_end - flush_time_start) \
-                      << " seconds to flush trace to std::cout." << std::endl;
+                      << " seconds to flush trace to CSV." << std::endl;
             return;
         }
 
