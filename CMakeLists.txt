@@ -46,6 +46,7 @@ if (NOT RAJA_LOADED)
   set(ENABLE_OPENMP On CACHE Bool "Build OpenMP support")
   set(ENABLE_CUDA Off CACHE Bool "Build CUDA support")
   set(ENABLE_APOLLO Off CACHE Bool "Include Apollo policy support")
+  set(ENABLE_OPENMP_TRACE Off CACHE Bool "Include OpenMP Trace support")
   set(ENABLE_COPY_HEADERS Off CACHE Bool "")
   set(ENABLE_WARNINGS_AS_ERRORS Off CACHE Bool "")
 
@@ -146,6 +147,12 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Intel" AND CMAKE_CXX_COMPILER_VERSION V
     set(raja_depends
     ${raja_depends}
     apollo)
+  endif()
+
+  if (ENABLE_OPENMP_TRACE)
+      set(raja_depends
+          ${raja_depends}
+          callpath)
   endif()
 
   blt_add_library(

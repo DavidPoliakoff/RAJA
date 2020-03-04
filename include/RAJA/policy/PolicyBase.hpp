@@ -42,7 +42,8 @@ enum class Policy {
   target_openmp,
   cuda,
   tbb,
-  apollo
+  apollo,
+  openmp_trace
 };
 
 enum class Pattern {
@@ -185,6 +186,9 @@ struct is_cuda_policy : RAJA::policy_is<Pol, RAJA::Policy::cuda> {
 };
 template <typename Pol>
 struct is_apollo_policy : RAJA::policy_is<Pol, RAJA::Policy::apollo> {
+};
+template <typename Pol>
+struct is_openmp_trace_policy : RAJA::policy_is<Pol, RAJA::Policy::openmp_trace> {
 };
 
 DefineTypeTraitFromConcept(is_execution_policy,

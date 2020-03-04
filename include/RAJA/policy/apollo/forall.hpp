@@ -57,60 +57,7 @@
 #include "apollo/Region.h"
 
 
-//namespace RAJA
-//{
-//namespace policy
-//{
-//namespace omp
-//{
-
-// NOTE(chad): We probably want to use a global here for performance, like these
-//             examples... revisit this soon.
-
-//template <typename Iterable, typename Func>
-//RAJA_INLINE void forall_impl(const RAJA::apollo_omp_auto&, Iterable&& iter, Func&& loop_body) {
-//  RAJA_EXTRACT_BED_IT(iter);
-//#pragma omp parallel for num_threads(g_apollo_num_threads) schedule(auto)
-//  for (decltype(distance_it) i = 0; i < distance_it; ++i) {
-//    loop_body(begin_it[i]);
-//  }
-//}
-//
-//template <typename Iterable, typename Func>
-//RAJA_INLINE void forall_impl(const RAJA::apollo_omp_static&, Iterable&& iter, Func&& loop_body) {
-//  RAJA_EXTRACT_BED_IT(iter);
-//#pragma omp parallel for num_threads(g_apollo_num_threads) schedule(static)
-//  for (decltype(distance_it) i = 0; i < distance_it; ++i) {
-//    loop_body(begin_it[i]);
-//  }
-//}
-//
-//template <typename Iterable, typename Func>
-//RAJA_INLINE void forall_impl(const RAJA::apollo_omp_dynamic&, Iterable&& iter, Func&& loop_body) {
-//  RAJA_EXTRACT_BED_IT(iter);
-//#pragma omp parallel for num_threads(g_apollo_num_threads) schedule(dynamic)
-//  for (decltype(distance_it) i = 0; i < distance_it; ++i) {
-//    loop_body(begin_it[i]);
-//  }
-//}
-//
-//template <typename Iterable, typename Func>
-//RAJA_INLINE void forall_impl(const RAJA::apollo_omp_guided&, Iterable&& iter, Func&& loop_body) {
-//  RAJA_EXTRACT_BED_IT(iter);
-//#pragma omp parallel for num_threads(g_apollo_num_threads) schedule(guided)
-//  for (decltype(distance_it) i = 0; i < distance_it; ++i) {
-//    loop_body(begin_it[i]);
-//  }
-//}
-
-//}  // namespace omp
-//}  // namespace policy
-//}  // namespace RAJA
-
-
-
 // ----------
-
 
 
 namespace RAJA
@@ -119,6 +66,8 @@ namespace policy
 {
 namespace apollo
 {
+// NOTE(chad): We probably want to use a global here for performance, like the
+//             examples at the end of the file... revisit this soon.
 
 template <typename Iterable, typename Func>
 RAJA_INLINE void forall_impl(const RAJA::apollo_omp_auto&, Iterable&& iter, Func&& loop_body) {
@@ -238,6 +187,7 @@ RAJA_INLINE void apolloPolicySwitcher(int policy, int tc[], BODY body) {
         case   0:
             body(apolloPolicyOMPDefault{});
             break;
+        // NOTE(chad): case 1 (cpu_seq) has already returned, see above.
         case   2:
         case   3:
         case   4:
@@ -268,6 +218,103 @@ RAJA_INLINE void apolloPolicySwitcher(int policy, int tc[], BODY body) {
 }
 
 const int POLICY_COUNT = 20;
+
+
+template <typename Iterable, typename Func>
+RAJA_INLINE void forall_impl(const apollo_exec &, Iterable &&iter, Func &&body)
+{
+    static Apollo         *apollo             = Apollo::instance();
+    static Apollo::Region *apolloRegion       = nullptr;
+    static int             policy_index       = 0;
+    static int             th_count_opts[6]   = {2, 2, 2, 2, 2, 2};
+    if (apolloRegion == nullptr) {
+        std::string code_location = apollo->getCallpathOffset();
+        apolloRegion = new Apollo::Region(
+            code_location.c_str(),
+            RAJA::policy::apollo::POLICY_COUNT);
+        // Set the range of thread counts we want to make available for
+        // bootstrapping and use by this Apollo::Region.
+        th_count_opts[0] = 2;
+        th_count_opts[1] = std::min(4,  std::max(2, (int)(apollo->numThreadsPerProcCap * 0.25)));
+        th_count_opts[2] = std::min(8,  std::max(2, (int)(apollo->numThreadsPerProcCap * 0.50)));
+        th_count_opts[3] = std::min(16, std::max(2, (int)(apollo->numThreadsPerProcCap * 0.75)));
+        th_count_opts[4] = std::min(32, std::max(2, apollo->numThreadsPerProcCap));
+        th_count_opts[5] = std::max(2, apollo->numThreadsPerProcCap);
+	}
+
+    // Count the number of elements.
+    double num_elements = 0.0;
+    num_elements = (double) std::distance(std::begin(iter), std::end(iter));
+
+    apolloRegion->begin();
+    apollo->setFeature("num_elements", num_elements);
+
+    policy_index = apolloRegion->getPolicyIndex();
+    apolloPolicySwitcher(policy_index, th_count_opts, [=] (auto pol) mutable {
+            forall_impl(pol, iter, body); });
+
+    apolloRegion->end();
+}
+
+//////////
+}  // closing brace for apollo namespace
+}  // closing brace for policy namespace
+}  // closing brace for RAJA namespace
+
+#endif  // closing endif for header file include guard
+
+
+
+// Examples of loops using a global instead of lookup for thread count:
+//
+//namespace RAJA
+//{
+//namespace policy
+//{
+//namespace omp
+//{
+
+//template <typename Iterable, typename Func>
+//RAJA_INLINE void forall_impl(const RAJA::apollo_omp_auto&, Iterable&& iter, Func&& loop_body) {
+//  RAJA_EXTRACT_BED_IT(iter);
+//#pragma omp parallel for num_threads(g_apollo_num_threads) schedule(auto)
+//  for (decltype(distance_it) i = 0; i < distance_it; ++i) {
+//    loop_body(begin_it[i]);
+//  }
+//}
+//
+//template <typename Iterable, typename Func>
+//RAJA_INLINE void forall_impl(const RAJA::apollo_omp_static&, Iterable&& iter, Func&& loop_body) {
+//  RAJA_EXTRACT_BED_IT(iter);
+//#pragma omp parallel for num_threads(g_apollo_num_threads) schedule(static)
+//  for (decltype(distance_it) i = 0; i < distance_it; ++i) {
+//    loop_body(begin_it[i]);
+//  }
+//}
+//
+//template <typename Iterable, typename Func>
+//RAJA_INLINE void forall_impl(const RAJA::apollo_omp_dynamic&, Iterable&& iter, Func&& loop_body) {
+//  RAJA_EXTRACT_BED_IT(iter);
+//#pragma omp parallel for num_threads(g_apollo_num_threads) schedule(dynamic)
+//  for (decltype(distance_it) i = 0; i < distance_it; ++i) {
+//    loop_body(begin_it[i]);
+//  }
+//}
+//
+//template <typename Iterable, typename Func>
+//RAJA_INLINE void forall_impl(const RAJA::apollo_omp_guided&, Iterable&& iter, Func&& loop_body) {
+//  RAJA_EXTRACT_BED_IT(iter);
+//#pragma omp parallel for num_threads(g_apollo_num_threads) schedule(guided)
+//  for (decltype(distance_it) i = 0; i < distance_it; ++i) {
+//    loop_body(begin_it[i]);
+//  }
+//}
+
+//}  // namespace omp
+//}  // namespace policy
+//}  // namespace RAJA
+
+
 
 //
 // ///////////////////// Classic template ///////////////////////
@@ -333,45 +380,3 @@ const int POLICY_COUNT = 20;
 
 
 
-template <typename Iterable, typename Func>
-RAJA_INLINE void forall_impl(const apollo_exec &, Iterable &&iter, Func &&body)
-{
-    static Apollo         *apollo             = Apollo::instance();
-    static Apollo::Region *apolloRegion       = nullptr;
-    static int             policy_index       = 0;
-    static int             th_count_opts[6]   = {2, 2, 2, 2, 2, 2};
-    if (apolloRegion == nullptr) {
-        std::string code_location = apollo->getCallpathOffset();
-        apolloRegion = new Apollo::Region(
-            code_location.c_str(),
-            RAJA::policy::apollo::POLICY_COUNT);
-        // Set the range of thread counts we want to make available for
-        // bootstrapping and use by this Apollo::Region.
-        th_count_opts[0] = 2;
-        th_count_opts[1] = std::min(4,  std::max(2, (int)(apollo->numThreadsPerProcCap * 0.25)));
-        th_count_opts[2] = std::min(8,  std::max(2, (int)(apollo->numThreadsPerProcCap * 0.50)));
-        th_count_opts[3] = std::min(16, std::max(2, (int)(apollo->numThreadsPerProcCap * 0.75)));
-        th_count_opts[4] = std::min(32, std::max(2, apollo->numThreadsPerProcCap));
-        th_count_opts[5] = std::max(2, apollo->numThreadsPerProcCap);
-	}
-
-    // Count the number of elements.
-    double num_elements = 0.0;
-    num_elements = (double) std::distance(std::begin(iter), std::end(iter));
-
-    apolloRegion->begin();
-    apollo->setFeature("num_elements", num_elements);
-
-    policy_index = apolloRegion->getPolicyIndex();
-    apolloPolicySwitcher(policy_index, th_count_opts, [=] (auto pol) mutable {
-            forall_impl(pol, iter, body); });
-
-    apolloRegion->end();
-}
-
-//////////
-}  // closing brace for apollo namespace
-}  // closing brace for policy namespace
-}  // closing brace for RAJA namespace
-
-#endif  // closing endif for header file include guard

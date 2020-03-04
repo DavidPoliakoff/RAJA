@@ -32,6 +32,7 @@
 #include "RAJA/config.hpp"
 
 #include <iostream>
+#include <sys/time.h>
 #include <type_traits>
 
 #include <string>
@@ -55,12 +56,14 @@
 
 #include "CallpathRuntime.h"
 
-
-
+#define NOTE_TIME(__into_this_dbl)                              \
+    {                                                           \
+        struct timeval t;                                       \
+        gettimeofday(&t, NULL);                                 \
+        __into_this_dbl = (double)(t.tv_sec + (t.tv_usec/1e6)); \
+    }
 
 // ----------
-
-
 
 namespace RAJA
 {
@@ -68,15 +71,6 @@ namespace policy
 {
 namespace openmp_trace
 {
-
-template <typename Iterable, typename Func>
-RAJA_INLINE void forall_impl(const RAJA::openmp_trace_parallel_for&, Iterable&& iter, Func&& loop_body) {
-  RAJA_EXTRACT_BED_IT(iter);
-  for (decltype(distance_it) i = 0; i < distance_it; ++i) {
-    loop_body(begin_it[i]);
-  }
-}
-
 
 inline void replace_all(std::string& input, const std::string& from, const std::string& to) {
 	size_t pos = 0;
@@ -86,17 +80,38 @@ inline void replace_all(std::string& input, const std::string& from, const std::
 	}
 }
 
-#define NOTE_TIME(__into_this_dbl)                              \
-    {                                                           \
-        struct timeval t;                                       \
-        gettimeofday(&t, NULL);                                 \
-        __into_this_dbl = (double)(t.tv_sec + (t.tv_usec/1e6)); \
+inline const char* safe_getenv(const char *var_name, const char *use_this_if_not_found, bool silent=false) {
+    char *c = getenv(var_name);
+    if (c == NULL) {
+        if (not silent) {
+            std::cout << "== RAJA(openmp_trace): Looked for " << var_name << " but getenv()" \
+                << " did not find anything.  Using '" << use_this_if_not_found \
+                << "' (default) instead." << std::endl;
+        }
+        return use_this_if_not_found;
+    } else {
+        return c;
     }
+}
 
+//template <typename Iterable, typename Func>
+//RAJA_INLINE void forall_impl(const RAJA::openmp_trace_parallel_for&, Iterable&& iter, Func&& loop_body) {
+//  RAJA_EXTRACT_BED_IT(iter);
+//  for (decltype(distance_it) i = 0; i < distance_it; ++i) {
+//    loop_body(begin_it[i]);
+//  }
+//}
+//
 
+using openmpTracePolicy = RAJA::omp_parallel_for_exec;
+
+template <typename BODY>
+RAJA_INLINE void openmp_trace_executor(BODY body) {
+    body(openmpTracePolicy{});
+}
 
 template <typename Iterable, typename Func>
-RAJA_INLINE void forall_impl(const openmp_trace_parallel_for &, Iterable &&iter, Func &&body)
+RAJA_INLINE void forall_impl(const openmp_trace_exec &, Iterable &&iter, Func &&body)
 {
     static bool            initialized_yet   = false;
     static std::string     node_id           = "";
@@ -117,10 +132,12 @@ RAJA_INLINE void forall_impl(const openmp_trace_parallel_for &, Iterable &&iter,
         replace_all(offsetptr, ")", "_");
         region_name = offsetptr;
 
-        node_id        = "default" //TODO(chad) : actual answer
-        comm_rank      = -1;       //TODO(chad) : actial answer
-        num_threads    = std::atoi(getenv("OMP_NUM_THREADS"));             //TODO(chad)
-        policy_index   = std::atoi(getenv("TRACE_AS_APOLLO_POLICY_INDEX"); //TODO(chad)
+        node_id        = safe_getenv("HOSTNAME", "default");
+        comm_rank      = std::atoi(safe_getenv("PMI_RANK",
+                                   safe_getenv("OMPI_COMM_WORLD_RANK",
+                                               "-1", true), true));
+        num_threads    = std::atoi(safe_getenv("OMP_NUM_THREADS", "-1"));
+        policy_index   = std::atoi(safe_getenv("TRACE_AS_POLICY_INDEX", "-1"));
 
 	    initialized_yet = true;
     }
@@ -129,9 +146,13 @@ RAJA_INLINE void forall_impl(const openmp_trace_parallel_for &, Iterable &&iter,
     double num_elements = 0.0;
     num_elements = (double) std::distance(std::begin(iter), std::end(iter));
 
+    double exec_time_begin = 0.0;
+    double exec_time_end   = 0.0;
 
     NOTE_TIME(exec_time_begin);
-    body(RAJA::omp_parallel_for_exec{});
+
+    openmp_trace_executor([=] (auto pol) mutable {forall_impl(pol, iter, body);});
+
     NOTE_TIME(exec_time_end);
 
     std::cout.precision(17);
