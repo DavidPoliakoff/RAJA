@@ -203,7 +203,7 @@ class OpenMPTraceControl
                     << std::get<5>(t) /* num_threads */   << "," \
                     << std::get<6>(t) /* num_elements */  << "," \
                     << std::fixed << std::get<7>(t) /* (exec_time_end - exec_time_begin) */ \
-                    << std::endl;
+                    << "\n";
             }
             sink.flush();
         }
