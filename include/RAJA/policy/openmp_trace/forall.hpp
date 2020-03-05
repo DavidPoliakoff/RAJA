@@ -245,7 +245,7 @@ RAJA_INLINE void forall_impl(const openmp_trace_exec &, Iterable &&iter, Func &&
                                    safe_getenv("OMPI_COMM_WORLD_RANK",
                                                "-1", true), true));
         num_threads    = std::atoi(safe_getenv("OMP_NUM_THREADS", "-1"));
-        policy_index   = std::atoi(safe_getenv("TRACE_AS_POLICY_INDEX", "-1"));
+        policy_index   = std::atoi(safe_getenv("OPENMP_TRACE_AS_POLICY", "-1"));
 
         v = OpenMPTraceControl::instance()->getTraceVectorPtr();
 
