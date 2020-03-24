@@ -131,9 +131,16 @@ using apolloPolicyOMPStatic  = RAJA::apollo_omp_static;
 using apolloPolicyOMPDynamic = RAJA::apollo_omp_dynamic;
 using apolloPolicyOMPGuided  = RAJA::apollo_omp_guided;
 
+#if NUM_THREADS_FEATURE
 #define APOLLO_OMP_SET_THREADS(__threads) \
 { \
     Apollo::instance()->setFeature("num_threads", (double) __threads); \
+    g_apollo_num_threads = __threads; \
+};
+#endif
+
+#define APOLLO_OMP_SET_THREADS(__threads) \
+{ \
     g_apollo_num_threads = __threads; \
 };
 
@@ -157,7 +164,9 @@ RAJA_INLINE void apolloPolicySwitcher(int policy, int tc[], BODY body) {
                   // available, but the learned model will be able to make
                   // more significant performance improvements for applications
                   // with ocassional sparse inputs to loops.
+#if NUM_THREADS_FEATURE
                   apollo->setFeature("num_threads", 1.0);
+#endif
                   apollo->numThreads = 1;
                   body(apolloPolicySeq{});
                   return;
@@ -181,7 +190,9 @@ RAJA_INLINE void apolloPolicySwitcher(int policy, int tc[], BODY body) {
         case  19: apollo->numThreads = tc[5]; break;
     }
 
+#if NUM_THREADS_FEATURE
     apollo->setFeature("num_threads", (double) apollo->numThreads);
+#endif
 
     switch(policy) {
         case   0:
@@ -230,8 +241,10 @@ RAJA_INLINE void forall_impl(const apollo_exec &, Iterable &&iter, Func &&body)
     if (apolloRegion == nullptr) {
         std::string code_location = apollo->getCallpathOffset();
         apolloRegion = new Apollo::Region(
-            code_location.c_str(),
-            RAJA::policy::apollo::POLICY_COUNT);
+                1, //num features
+                code_location.c_str(), // region uid
+                RAJA::policy::apollo::POLICY_COUNT // num policies
+                );
         // Set the range of thread counts we want to make available for
         // bootstrapping and use by this Apollo::Region.
         th_count_opts[0] = 2;
@@ -243,11 +256,11 @@ RAJA_INLINE void forall_impl(const apollo_exec &, Iterable &&iter, Func &&body)
 	}
 
     // Count the number of elements.
-    double num_elements = 0.0;
-    num_elements = (double) std::distance(std::begin(iter), std::end(iter));
+    float num_elements = 0.0;
+    num_elements = (float) std::distance(std::begin(iter), std::end(iter));
 
     apolloRegion->begin();
-    apollo->setFeature("num_elements", num_elements);
+    apollo->setFeature(num_elements);
 
     policy_index = apolloRegion->getPolicyIndex();
     apolloPolicySwitcher(policy_index, th_count_opts, [=] (auto pol) mutable {
