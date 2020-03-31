@@ -26,15 +26,9 @@
 #ifndef RAJA_apollo_HPP
 #define RAJA_apollo_HPP
 
-//#include "RAJA/policy/sequential/atomic.hpp"
 #include "RAJA/policy/apollo/forall.hpp"
 #include "RAJA/policy/apollo/policy.hpp"
-//#include "RAJA/policy/openmp/reduce.hpp"
-//#include "RAJA/policy/sequential/scan.hpp"
+#include "RAJA/policy/apollo/scan.hpp"
 
-//#if defined(RAJA_ENABLE_TARGET_OPENMP)
-//#include "RAJA/policy/openmp/target_forall.hpp"
-//#include "RAJA/policy/openmp/target_reduce.hpp"
-//#endif
 
 #endif  // closing endif for header file include guard

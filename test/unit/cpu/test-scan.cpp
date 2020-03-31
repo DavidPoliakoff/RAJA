@@ -39,6 +39,10 @@ using ExecTypes = std::tuple<RAJA::seq_exec
                              ,
                              RAJA::omp_parallel_for_exec
 #endif
+#if defined(RAJA_ENABLE_APOLLO)
+                             ,
+                             RAJA::apollo_exec
+#endif
 #if defined(RAJA_ENABLE_TBB)
                              ,
                              RAJA::tbb_for_exec

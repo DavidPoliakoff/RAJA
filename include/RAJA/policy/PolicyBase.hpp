@@ -178,8 +178,7 @@ template <typename Pol>
 struct is_tbb_policy : RAJA::policy_is<Pol, RAJA::Policy::tbb> {
 };
 template <typename Pol>
-struct is_target_openmp_policy
-    : RAJA::policy_is<Pol, RAJA::Policy::target_openmp> {
+struct is_target_openmp_policy : RAJA::policy_is<Pol, RAJA::Policy::target_openmp> {
 };
 template <typename Pol>
 struct is_cuda_policy : RAJA::policy_is<Pol, RAJA::Policy::cuda> {
