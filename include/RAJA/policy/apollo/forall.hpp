@@ -70,36 +70,40 @@ namespace apollo
 //             examples at the end of the file... revisit this soon.
 
 template <typename Iterable, typename Func>
-RAJA_INLINE void forall_impl(const RAJA::apollo_omp_auto&, Iterable&& iter, Func&& loop_body) {
+RAJA_INLINE void forall_impl(const RAJA::apollo_omp_auto&, int num_threads, Iterable&& iter, Func&& loop_body) {
   RAJA_EXTRACT_BED_IT(iter);
-#pragma omp parallel for num_threads(Apollo::instance()->numThreads) schedule(auto)
+  //std::cout << "Policy auto num_threads " << Apollo::instance()->numThreads << std::endl;
+#pragma omp parallel for num_threads(num_threads) schedule(auto)
   for (decltype(distance_it) i = 0; i < distance_it; ++i) {
     loop_body(begin_it[i]);
   }
 }
 
 template <typename Iterable, typename Func>
-RAJA_INLINE void forall_impl(const RAJA::apollo_omp_static&, Iterable&& iter, Func&& loop_body) {
+RAJA_INLINE void forall_impl(const RAJA::apollo_omp_static&, int num_threads, Iterable&& iter, Func&& loop_body) {
   RAJA_EXTRACT_BED_IT(iter);
-#pragma omp parallel for num_threads(Apollo::instance()->numThreads) schedule(static)
+  //std::cout << "Policy static num_threads " << Apollo::instance()->numThreads << std::endl;
+#pragma omp parallel for num_threads(num_threads) schedule(static)
   for (decltype(distance_it) i = 0; i < distance_it; ++i) {
     loop_body(begin_it[i]);
   }
 }
 
 template <typename Iterable, typename Func>
-RAJA_INLINE void forall_impl(const RAJA::apollo_omp_dynamic&, Iterable&& iter, Func&& loop_body) {
+RAJA_INLINE void forall_impl(const RAJA::apollo_omp_dynamic&, int num_threads, Iterable&& iter, Func&& loop_body) {
   RAJA_EXTRACT_BED_IT(iter);
-#pragma omp parallel for num_threads(Apollo::instance()->numThreads) schedule(dynamic)
+  //std::cout << "Policy dynamic num_threads " << Apollo::instance()->numThreads << std::endl;
+#pragma omp parallel for num_threads(num_threads) schedule(dynamic)
   for (decltype(distance_it) i = 0; i < distance_it; ++i) {
     loop_body(begin_it[i]);
   }
 }
 
 template <typename Iterable, typename Func>
-RAJA_INLINE void forall_impl(const RAJA::apollo_omp_guided&, Iterable&& iter, Func&& loop_body) {
+RAJA_INLINE void forall_impl(const RAJA::apollo_omp_guided&, int num_threads, Iterable&& iter, Func&& loop_body) {
   RAJA_EXTRACT_BED_IT(iter);
-#pragma omp parallel for num_threads(Apollo::instance()->numThreads) schedule(guided)
+  //std::cout << "Policy guided num_threads " << Apollo::instance()->numThreads << std::endl;
+#pragma omp parallel for num_threads(num_threads) schedule(guided)
   for (decltype(distance_it) i = 0; i < distance_it; ++i) {
     loop_body(begin_it[i]);
   }
@@ -134,7 +138,7 @@ using apolloPolicyOMPGuided  = RAJA::apollo_omp_guided;
 #if NUM_THREADS_FEATURE
 #define APOLLO_OMP_SET_THREADS(__threads) \
 { \
-    Apollo::instance()->setFeature("num_threads", (double) __threads); \
+    Apollo::instance()->setFeature("num_threads ", (double) __threads); \
     g_apollo_num_threads = __threads; \
 };
 #endif
@@ -144,8 +148,10 @@ using apolloPolicyOMPGuided  = RAJA::apollo_omp_guided;
     g_apollo_num_threads = __threads; \
 };
 
-template <typename BODY>
-RAJA_INLINE void apolloPolicySwitcher(int policy, int tc[], BODY body) {
+//template <typename BODY>
+//RAJA_INLINE void apolloPolicySwitcher(int policy, int tc[], BODY body) {
+template <typename Iterable, typename Func>
+RAJA_INLINE void apolloPolicySwitcher(int policy, int tc[], Iterable &&iter, Func &&loop_body) {
     Apollo *apollo             = Apollo::instance();
     switch(policy) {
         case   0: // The 0th policy is always a "safe" choice in Apollo as a
@@ -165,10 +171,11 @@ RAJA_INLINE void apolloPolicySwitcher(int policy, int tc[], BODY body) {
                   // more significant performance improvements for applications
                   // with ocassional sparse inputs to loops.
 #if NUM_THREADS_FEATURE
-                  apollo->setFeature("num_threads", 1.0);
+                  apollo->setFeature("num_threads ", 1.0);
 #endif
                   apollo->numThreads = 1;
-                  body(apolloPolicySeq{});
+                  //std::cout << "Policy static seq num_threads " << Apollo::instance()->numThreads << std::endl;
+                  forall_impl(apolloPolicySeq{}, iter, loop_body);
                   return;
         case   2: apollo->numThreads = tc[0]; break;
         case   3: apollo->numThreads = tc[1]; break;
@@ -191,12 +198,13 @@ RAJA_INLINE void apolloPolicySwitcher(int policy, int tc[], BODY body) {
     }
 
 #if NUM_THREADS_FEATURE
-    apollo->setFeature("num_threads", (double) apollo->numThreads);
+    apollo->setFeature("num_threads ", (double) apollo->numThreads);
 #endif
 
     switch(policy) {
         case   0:
-            body(apolloPolicyOMPDefault{});
+            //std::cout << "Policy omp defaults num_threads " << Apollo::instance()->numThreads << std::endl;
+            forall_impl(apolloPolicyOMPDefault{}, iter, loop_body);
             break;
         // NOTE(chad): case 1 (cpu_seq) has already returned, see above.
         case   2:
@@ -205,7 +213,8 @@ RAJA_INLINE void apolloPolicySwitcher(int policy, int tc[], BODY body) {
         case   5:
         case   6:
         case   7:
-            body(apolloPolicyOMPStatic{});
+            //body(apolloPolicyOMPStatic{});
+            forall_impl(apolloPolicyOMPStatic{}, apollo->numThreads, iter, loop_body);
             break;
         case   8:
         case   9:
@@ -213,7 +222,8 @@ RAJA_INLINE void apolloPolicySwitcher(int policy, int tc[], BODY body) {
         case  11:
         case  12:
         case  13:
-            body(apolloPolicyOMPDynamic{});
+            //body(apolloPolicyOMPDynamic{});
+            forall_impl(apolloPolicyOMPDynamic{}, apollo->numThreads, iter, loop_body);
             break;
         case  14:
         case  15:
@@ -221,8 +231,12 @@ RAJA_INLINE void apolloPolicySwitcher(int policy, int tc[], BODY body) {
         case  17:
         case  18:
         case  19:
-            body(apolloPolicyOMPGuided{});
+            //body(apolloPolicyOMPGuided{});
+            forall_impl(apolloPolicyOMPGuided{}, apollo->numThreads, iter, loop_body);
             break;
+        default:
+            std::cerr << "Invalid policy " << std::to_string( policy ) << std::endl;
+            abort();
     }
 
     return;
@@ -232,7 +246,7 @@ const int POLICY_COUNT = 20;
 
 
 template <typename Iterable, typename Func>
-RAJA_INLINE void forall_impl(const apollo_exec &, Iterable &&iter, Func &&body)
+RAJA_INLINE void forall_impl(const apollo_exec &, Iterable &&iter, Func &&loop_body)
 {
     static Apollo         *apollo             = Apollo::instance();
     static Apollo::Region *apolloRegion       = nullptr;
@@ -247,12 +261,12 @@ RAJA_INLINE void forall_impl(const apollo_exec &, Iterable &&iter, Func &&body)
                 );
         // Set the range of thread counts we want to make available for
         // bootstrapping and use by this Apollo::Region.
-        th_count_opts[0] = 2;
-        th_count_opts[1] = std::min(4,  std::max(2, (int)(apollo->numThreadsPerProcCap * 0.25)));
-        th_count_opts[2] = std::min(8,  std::max(2, (int)(apollo->numThreadsPerProcCap * 0.50)));
-        th_count_opts[3] = std::min(16, std::max(2, (int)(apollo->numThreadsPerProcCap * 0.75)));
-        th_count_opts[4] = std::min(32, std::max(2, apollo->numThreadsPerProcCap));
-        th_count_opts[5] = std::max(2, apollo->numThreadsPerProcCap);
+        th_count_opts[0] = std::max(2, apollo->numThreadsPerProcCap);
+        th_count_opts[1] = std::min(32, std::max(2, apollo->numThreadsPerProcCap));
+        th_count_opts[2] = std::min(16, std::max(2, (int)(apollo->numThreadsPerProcCap * 0.75)));
+        th_count_opts[3] = std::min(8,  std::max(2, (int)(apollo->numThreadsPerProcCap * 0.50)));
+        th_count_opts[4] = std::min(4,  std::max(2, (int)(apollo->numThreadsPerProcCap * 0.25)));
+        th_count_opts[5] = 2;
 	}
 
     // Count the number of elements.
@@ -263,8 +277,8 @@ RAJA_INLINE void forall_impl(const apollo_exec &, Iterable &&iter, Func &&body)
     apollo->setFeature(num_elements);
 
     policy_index = apolloRegion->getPolicyIndex();
-    apolloPolicySwitcher(policy_index, th_count_opts, [=] (auto pol) mutable {
-            forall_impl(pol, iter, body); });
+
+    apolloPolicySwitcher(policy_index, th_count_opts, iter, loop_body);
 
     apolloRegion->end();
 }
