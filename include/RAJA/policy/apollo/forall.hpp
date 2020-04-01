@@ -187,13 +187,22 @@ RAJA_INLINE void apolloPolicySwitcher(int policy, int tc[], Iterable &&iter, Fun
                   // available, but the learned model will be able to make
                   // more significant performance improvements for applications
                   // with ocassional sparse inputs to loops.
+                  {
 #if NUM_THREADS_FEATURE
-                  apollo->setFeature("num_threads ", 1.0);
+                      apollo->setFeature("num_threads ", 1.0);
 #endif
-                  apollo->numThreads = 1;
-                  //std::cout << "Policy static seq num_threads " << Apollo::instance()->numThreads << std::endl;
-                  forall_impl(apolloPolicySeq{}, iter, loop_body);
-                  return;
+                      apollo->numThreads = 1;
+                      //std::cout << "Policy static seq num_threads " << Apollo::instance()->numThreads << std::endl;
+                      //forall_impl(apolloPolicyOMPStatic{}, 1, iter, loop_body);
+                      // Execute in-place
+                      RAJA_EXTRACT_BED_IT(iter);
+                      using RAJA::internal::thread_privatize;
+                      auto body = thread_privatize(loop_body);
+                      for (decltype(distance_it) i = 0; i < distance_it; ++i) {
+                          body.get_priv()(begin_it[i]);
+                      }
+                      return;
+                  }
         case   2: apollo->numThreads = tc[0]; break;
         case   3: apollo->numThreads = tc[1]; break;
         case   4: apollo->numThreads = tc[2]; break;
