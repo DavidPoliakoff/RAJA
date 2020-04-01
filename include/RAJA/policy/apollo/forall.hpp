@@ -73,9 +73,14 @@ template <typename Iterable, typename Func>
 RAJA_INLINE void forall_impl(const RAJA::apollo_omp_auto&, int num_threads, Iterable&& iter, Func&& loop_body) {
   RAJA_EXTRACT_BED_IT(iter);
   //std::cout << "Policy auto num_threads " << Apollo::instance()->numThreads << std::endl;
-#pragma omp parallel for num_threads(num_threads) schedule(auto) firstprivate(loop_body)
-  for (decltype(distance_it) i = 0; i < distance_it; ++i) {
-    loop_body(begin_it[i]);
+#pragma omp parallel num_threads(num_threads)
+  {
+      using RAJA::internal::thread_privatize;
+      auto body = thread_privatize(loop_body);
+#pragma omp for schedule(auto)
+      for (decltype(distance_it) i = 0; i < distance_it; ++i) {
+          body.get_priv()(begin_it[i]);
+      }
   }
 }
 
@@ -83,9 +88,14 @@ template <typename Iterable, typename Func>
 RAJA_INLINE void forall_impl(const RAJA::apollo_omp_static&, int num_threads, Iterable&& iter, Func&& loop_body) {
   RAJA_EXTRACT_BED_IT(iter);
   //std::cout << "Policy static num_threads " << Apollo::instance()->numThreads << std::endl;
-#pragma omp parallel for num_threads(num_threads) schedule(static) firstprivate(loop_body)
-  for (decltype(distance_it) i = 0; i < distance_it; ++i) {
-    loop_body(begin_it[i]);
+#pragma omp parallel num_threads(num_threads)
+  {
+      using RAJA::internal::thread_privatize;
+      auto body = thread_privatize(loop_body);
+#pragma omp for schedule(static)
+      for (decltype(distance_it) i = 0; i < distance_it; ++i) {
+          body.get_priv()(begin_it[i]);
+      }
   }
 }
 
@@ -93,9 +103,14 @@ template <typename Iterable, typename Func>
 RAJA_INLINE void forall_impl(const RAJA::apollo_omp_dynamic&, int num_threads, Iterable&& iter, Func&& loop_body) {
   RAJA_EXTRACT_BED_IT(iter);
   //std::cout << "Policy dynamic num_threads " << Apollo::instance()->numThreads << std::endl;
-#pragma omp parallel for num_threads(num_threads) schedule(dynamic) firstprivate(loop_body)
-  for (decltype(distance_it) i = 0; i < distance_it; ++i) {
-    loop_body(begin_it[i]);
+#pragma omp parallel num_threads(num_threads)
+  {
+      using RAJA::internal::thread_privatize;
+      auto body = thread_privatize(loop_body);
+#pragma omp for schedule(dynamic)
+      for (decltype(distance_it) i = 0; i < distance_it; ++i) {
+          body.get_priv()(begin_it[i]);
+      }
   }
 }
 
@@ -103,14 +118,16 @@ template <typename Iterable, typename Func>
 RAJA_INLINE void forall_impl(const RAJA::apollo_omp_guided&, int num_threads, Iterable&& iter, Func&& loop_body) {
   RAJA_EXTRACT_BED_IT(iter);
   //std::cout << "Policy guided num_threads " << Apollo::instance()->numThreads << std::endl;
-#pragma omp parallel for num_threads(num_threads) schedule(guided) firstprivate(loop_body)
-  for (decltype(distance_it) i = 0; i < distance_it; ++i) {
-    loop_body(begin_it[i]);
+#pragma omp parallel num_threads(num_threads)
+  {
+      using RAJA::internal::thread_privatize;
+      auto body = thread_privatize(loop_body);
+#pragma omp for schedule(guided)
+      for (decltype(distance_it) i = 0; i < distance_it; ++i) {
+          body.get_priv()(begin_it[i]);
+      }
   }
 }
-
-
-
 
 //
 //////////////////////////////////////////////////////////////////////
@@ -243,7 +260,6 @@ RAJA_INLINE void apolloPolicySwitcher(int policy, int tc[], Iterable &&iter, Fun
 }
 
 const int POLICY_COUNT = 20;
-
 
 template <typename Iterable, typename Func>
 RAJA_INLINE void forall_impl(const apollo_exec &, Iterable &&iter, Func &&loop_body)
