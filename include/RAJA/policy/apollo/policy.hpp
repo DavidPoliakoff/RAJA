@@ -43,35 +43,6 @@ namespace apollo
 //////////////////////////////////////////////////////////////////////
 //
 
-struct apollo_omp_auto : make_policy_pattern_launch_platform_t<Policy::apollo,
-                                                        Pattern::forall,
-                                                        Launch::undefined,
-                                                        Platform::host> {
-};
-
-
-struct apollo_omp_static :  make_policy_pattern_launch_platform_t<Policy::apollo,
-                                                        Pattern::forall,
-                                                        Launch::undefined,
-                                                        Platform::host> {
-};
-
-
-struct apollo_omp_dynamic :  make_policy_pattern_launch_platform_t<Policy::apollo,
-                                                        Pattern::forall,
-                                                        Launch::undefined,
-                                                        Platform::host> {
-};
-
-
-struct apollo_omp_guided :  make_policy_pattern_launch_platform_t<Policy::apollo,
-                                                        Pattern::forall,
-                                                        Launch::undefined,
-                                                        Platform::host> {
-};
-
-
-
 ///
 /// Segment execution policies
 ///
@@ -106,6 +77,8 @@ struct apollo_reduce : make_policy_pattern_launch_platform_t<Policy::apollo,
                                                           Platform::host> {
 };
 
+const int POLICY_COUNT = 20;
+
 }  // end namespace apollo
 }  // end namespace policy
 
@@ -113,11 +86,6 @@ using policy::apollo::apollo_exec;
 using policy::apollo::apollo_region;
 using policy::apollo::apollo_segit;
 using policy::apollo::apollo_reduce;
-
-using policy::apollo::apollo_omp_auto;
-using policy::apollo::apollo_omp_static;
-using policy::apollo::apollo_omp_dynamic;
-using policy::apollo::apollo_omp_guided;
 
 ///
 ///////////////////////////////////////////////////////////////////////
