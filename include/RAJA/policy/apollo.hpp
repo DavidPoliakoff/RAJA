@@ -29,6 +29,6 @@
 #include "RAJA/policy/apollo/forall.hpp"
 #include "RAJA/policy/apollo/policy.hpp"
 #include "RAJA/policy/apollo/scan.hpp"
-
+#include "RAJA/policy/apollo/kernel.hpp"
 
 #endif  // closing endif for header file include guard
