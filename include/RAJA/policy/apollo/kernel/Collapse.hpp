@@ -133,8 +133,8 @@ struct StatementExecutor<statement::Collapse<apollo_collapse_exec,
 
       apolloRegion->begin();
 
-      apollo->setFeature(l0);
-      apollo->setFeature(l1);
+      apolloRegion->setFeature(l0);
+      apolloRegion->setFeature(l1);
 
       policy_index = apolloRegion->getPolicyIndex();
 
@@ -303,9 +303,9 @@ struct StatementExecutor<statement::Collapse<apollo_collapse_exec,
 
       apolloRegion->begin();
 
-      apollo->setFeature(l0);
-      apollo->setFeature(l1);
-      apollo->setFeature(l2);
+      apolloRegion->setFeature(l0);
+      apolloRegion->setFeature(l1);
+      apolloRegion->setFeature(l2);
 
       policy_index = apolloRegion->getPolicyIndex();
 

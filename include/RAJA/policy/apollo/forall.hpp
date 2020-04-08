@@ -124,7 +124,7 @@ RAJA_INLINE void forall_impl(const apollo_exec &, Iterable &&iter, Func &&loop_b
     num_elements = (float) std::distance(std::begin(iter), std::end(iter));
 
     apolloRegion->begin();
-    apollo->setFeature(num_elements);
+    apolloRegion->setFeature(num_elements);
 
     policy_index = apolloRegion->getPolicyIndex();
     //std::cout << "policy_index " << policy_index << std::endl; //ggout
