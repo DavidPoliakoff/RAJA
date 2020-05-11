@@ -172,9 +172,12 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Intel" AND CMAKE_CXX_COMPILER_VERSION V
   target_include_directories(RAJA
     PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/tpl/kokkos/core/src>
+    $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}/tpl/kokkos/>
     $<BUILD_INTERFACE:${PROJECT_BINARY_DIR}/include>
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/tpl/cub>
-    $<INSTALL_INTERFACE:include>)
+    $<INSTALL_INTERFACE:include>
+    )
 
   install(DIRECTORY include/ DESTINATION include FILES_MATCHING PATTERN *.hpp)
   install(DIRECTORY tpl/cub/ DESTINATION include FILES_MATCHING PATTERN *.cuh)
@@ -184,6 +187,18 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Intel" AND CMAKE_CXX_COMPILER_VERSION V
     include/RAJA/module.modulemap
     include/RAJA/module.private.modulemap
     DESTINATION "include/RAJA/")
+
+  set(Kokkos_ENABLE_SERIAL ON)
+  set(Kokkos_ENABLE_PROFILING ON)
+  set(Kokkos_ENABLE_TUNING ON)
+
+  add_subdirectory(tpl/kokkos)
+
+  set (raja_depends
+    ${raja_depends}
+    Kokkos::kokkos)
+  
+  #/target_link_libraries(raja kokkoscore kokkoscontainers)
 
   if(ENABLE_TESTS)
     add_subdirectory(test)

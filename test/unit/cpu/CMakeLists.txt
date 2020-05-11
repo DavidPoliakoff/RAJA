@@ -21,7 +21,8 @@ blt_add_library(
 
 raja_add_test(
   NAME test-scan
-  SOURCES test-scan.cpp)
+  SOURCES test-scan.cpp
+  DEPENDS_ON RAJA ${raja_depends})
 
 #raja_add_test(
 #  NAME test-reduce
