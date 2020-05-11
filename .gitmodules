@@ -4,3 +4,7 @@
 [submodule "include/cub"]
 	path = tpl/cub
 	url = https://github.com/NVlabs/cub.git
+[submodule "tpl/kokkos"]
+	path = tpl/kokkos
+	url = https://github.com/DavidPoliakoff/kokkos.git
+	branch = feature/tuning
